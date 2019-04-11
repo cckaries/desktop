@@ -212,8 +212,10 @@ import {
   createDesktopStashEntry,
   getLastDesktopStashEntryForBranch,
   popStashEntry,
+  dropDesktopStashEntry,
 } from '../git/stash'
 import { UncommittedChangesStrategy } from '../../models/uncommitted-changes-strategy'
+import { IStashEntry } from '../../models/stash-entry'
 import { RebaseFlowStep, RebaseStep } from '../../models/rebase-flow-step'
 import { RebasePreview } from '../../models/rebase'
 
@@ -4759,6 +4761,33 @@ export class AppStore extends TypedBaseStore<IAppState> {
 
     await popStashEntry(repository, stash.stashSha)
     log.info(`Popped stash with commit id ${stash.stashSha}`)
+  }
+
+  public async _popStashEntry(repository: Repository, stashEntry: IStashEntry) {
+    const gitStore = this.gitStoreCache.get(repository)
+    await gitStore.performFailableOperation(() => {
+      return popStashEntry(repository, stashEntry.stashSha)
+    })
+    log.info(`Popped stash with commit id ${stashEntry.stashSha}`)
+
+    await this._refreshRepository(repository)
+
+    this.emitUpdate()
+  }
+
+  public async _dropStashEntry(
+    repository: Repository,
+    stashEntry: IStashEntry
+  ) {
+    const gitStore = this.gitStoreCache.get(repository)
+    await gitStore.performFailableOperation(() => {
+      return dropDesktopStashEntry(repository, stashEntry.stashSha)
+    })
+    log.info(`Dropped stash with commit id ${stashEntry.stashSha}`)
+
+    await this._refreshRepository(repository)
+
+    this.emitUpdate()
   }
 
   /** This shouldn't be called directly. See `Dispatcher`. */
